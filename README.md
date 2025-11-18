@@ -5,6 +5,14 @@
 - A CLI (`cmd/openapi-go-md`) for converting specs from files, stdin, or URLs.
 - A Go library (`pkg/markdown`) that you can call directly from your own code.
 
+## Supported specifications and behavior
+
+- **Specifications**: Swagger 2.0 (documents with top-level `swagger: "2.0"`) and OpenAPI 3.x (documents with top-level `openapi: "3.x"`).
+- **Input formats**: JSON or YAML, read from a local file, stdin, or an HTTP(S) URL.
+- **Behavior**: conversion is best-effort and never panics on user input; malformed specs may return an error or, when partially interpretable, produce incomplete Markdown.
+
+Some features are intentionally minimal for now (for example, no per-operation security breakdown and limited expansion of deeply nested schemas). These may evolve in future versions.
+
 ## Installation
 
 ### Using `go install`
@@ -80,6 +88,8 @@ The generated Markdown includes:
 - Endpoints grouped by tag, with parameters, responses, operation IDs, and media types.
 - Schemas with property types, required flags, default values, and enums where available.
 
+See `pkg/markdown/testdata` for example Swagger 2.0 and OpenAPI 3.x documents used in tests.
+
 ### Minimal example
 
 ```go
@@ -121,6 +131,14 @@ md, err := markdown.ToMarkdown(data, markdown.Options{
 ```
 
 The converter still attempts to parse the document and generate Markdown; it just avoids the additional validation step.
+
+## Stability & versioning
+
+This module follows semantic versioning. Until `v1.0.0` the API may change in minor ways as it evolves; once `v1.0.0` is tagged, breaking changes will only occur in new major versions.
+
+For most users it is sufficient to depend on the latest tagged version, for example:
+
+- `go get github.com/dmoose/openapi-go-md@latest`
 
 ## Development
 

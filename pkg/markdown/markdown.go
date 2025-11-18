@@ -1,3 +1,4 @@
+// Package markdown converts OpenAPI / Swagger specifications into Markdown.
 package markdown
 
 import (
@@ -8,14 +9,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// InputFormat controls how the raw spec bytes are interpreted.
+// The zero value (FormatAuto) auto-detects JSON vs YAML.
 type InputFormat string
 
 const (
+	// FormatAuto lets the converter detect JSON vs YAML automatically.
 	FormatAuto InputFormat = "auto"
+	// FormatJSON forces the input to be treated as JSON.
 	FormatJSON InputFormat = "json"
+	// FormatYAML forces the input to be treated as YAML.
 	FormatYAML InputFormat = "yaml"
 )
 
+// Options tune how ToMarkdown parses and validates the input spec.
 type Options struct {
 	Format         InputFormat
 	SkipValidation bool

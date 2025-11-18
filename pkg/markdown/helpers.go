@@ -10,6 +10,7 @@ import (
 
 // Shared helpers across Swagger 2.0 and OpenAPI 3.x markdown generation.
 
+// nonEmpty returns s if it is non-empty, otherwise fallback.
 func nonEmpty(s, fallback string) string {
 	if s == "" {
 		return fallback
