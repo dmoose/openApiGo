@@ -1,0 +1,280 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mini Store API (v3)",
+    "version": "1.0.0",
+    "description": "Small but complete OpenAPI 3.0 spec for testing."
+  },
+  "servers": [
+    { "url": "https://api.example.com/v1", "description": "Production" }
+  ],
+  "tags": [
+    { "name": "pets", "description": "Operations about pets" },
+    { "name": "owners", "description": "Owner operations" }
+  ],
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": ["pets"],
+        "summary": "List pets",
+        "description": "Returns a paged array of pets.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Max number of results.",
+            "schema": { "type": "integer", "format": "int32", "minimum": 1, "maximum": 100, "default": 20 }
+          },
+          {
+            "name": "x-trace-id",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Optional request correlation ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A paged array of pets",
+            "headers": {
+              "X-Next": {
+                "description": "Cursor for the next page.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PetList" }
+              }
+            }
+          },
+          "400": { "description": "Invalid request" }
+        }
+      },
+      "post": {
+        "tags": ["pets"],
+        "summary": "Create a pet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/NewPet" } },
+            "application/x-www-form-urlencoded": { "schema": { "$ref": "#/components/schemas/NewPet" } }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Pet" },
+                "examples": {
+                  "pet": { "$ref": "#/components/examples/PetExample" }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation error",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Error" } }
+            }
+          }
+        },
+        "security": [{ "ApiKeyAuth": [] }],
+        "callbacks": {
+          "onPetCreated": {
+            "$ref": "#/components/callbacks/PetUpdated"
+          }
+        }
+      }
+    },
+    "/pets/{id}": {
+      "parameters": [
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Pet ID" }
+      ],
+      "get": {
+        "tags": ["pets"],
+        "summary": "Get pet by ID",
+        "parameters": [
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["owner", "vaccinations"] }
+          },
+          {
+            "name": "session",
+            "in": "cookie",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Optional session token."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "links": {
+              "getOwner": {
+                "operationId": "getOwner",
+                "parameters": {
+                  "ownerId": "$response.body#/owner/id"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Pet" }
+              }
+            }
+          },
+          "404": { "description": "Not found" }
+        }
+      },
+      "delete": {
+        "tags": ["pets"],
+        "summary": "Delete pet",
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/owners/{ownerId}": {
+      "get": {
+        "tags": ["owners"],
+        "operationId": "getOwner",
+        "summary": "Get owner by ID",
+        "parameters": [
+          { "name": "ownerId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Owner" } }
+            }
+          },
+          "404": { "description": "Not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Pet": {
+        "type": "object",
+        "description": "A pet.",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "tag": { "type": "string" },
+          "status": { "type": "string", "enum": ["available", "pending", "sold"] },
+          "owner": { "$ref": "#/components/schemas/Owner" }
+        }
+      },
+      "NewPet": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Pet" },
+          {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "id": { "type": "string", "readOnly": true },
+              "callbackUrl": { "type": "string", "format": "uri", "description": "Where to deliver pet creation callbacks." }
+            }
+          }
+        ]
+      },
+      "Owner": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "preferences": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      },
+      "PetList": {
+        "type": "object",
+        "properties": {
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/Pet" } },
+          "next": { "type": "string" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "integer", "format": "int32" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "parameters": {
+      "TraceId": {
+        "name": "x-trace-id",
+        "in": "header",
+        "required": false,
+        "schema": { "type": "string" }
+      }
+    },
+    "responses": {
+      "NotFound": { "description": "Not found" }
+    },
+    "requestBodies": {
+      "NewPet": {
+        "required": true,
+        "content": {
+          "application/json": { "schema": { "$ref": "#/components/schemas/NewPet" } }
+        }
+      }
+    },
+    "headers": {
+      "X-Next": { "description": "Next page cursor", "schema": { "type": "string" } }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": { "type": "apiKey", "in": "header", "name": "X-API-Key" },
+      "OAuth2": {
+        "type": "oauth2",
+        "flows": {
+          "implicit": {
+            "authorizationUrl": "https://auth.example.com/authorize",
+            "scopes": {
+              "pets:write": "modify pets",
+              "pets:read": "read pets"
+            }
+          }
+        }
+      }
+    },
+    "examples": {
+      "PetExample": { "summary": "A sample pet", "value": { "id": "p1", "name": "Fido" } }
+    },
+    "links": {
+      "GetOwner": {
+        "operationId": "getOwner",
+        "parameters": { "ownerId": "$response.body#/owner/id" }
+      }
+    },
+    "callbacks": {
+      "PetUpdated": {
+        "{$request.body#/callbackUrl}": {
+          "post": {
+            "summary": "Pet update callback",
+            "requestBody": {
+              "required": true,
+              "content": {
+                "application/json": { "schema": { "$ref": "#/components/schemas/Pet" } }
+              }
+            },
+            "responses": { "200": { "description": "OK" } }
+          }
+        }
+      }
+    }
+  },
+  "security": [{ "OAuth2": ["pets:read"] }],
+  "externalDocs": {
+    "description": "More docs",
+    "url": "https://example.com/docs"
+  }
+}

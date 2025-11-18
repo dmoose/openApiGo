@@ -1,0 +1,193 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Mini Store API (v2)",
+    "version": "1.0.0",
+    "description": "Small but complete Swagger 2.0 spec for testing."
+  },
+  "host": "api.example.com",
+  "basePath": "/v1",
+  "schemes": ["https"],
+  "consumes": ["application/json", "application/x-www-form-urlencoded", "multipart/form-data"],
+  "produces": ["application/json"],
+  "tags": [
+    { "name": "pets", "description": "Operations about pets" },
+    { "name": "owners", "description": "Owner operations" }
+  ],
+  "paths": {
+    "/pets": {
+      "get": {
+        "tags": ["pets"],
+        "summary": "List pets",
+        "description": "Returns a paged array of pets.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "description": "Max number of results."
+          },
+          {
+            "name": "x-trace-id",
+            "in": "header",
+            "type": "string",
+            "required": false,
+            "description": "Optional request correlation ID."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A paged array of pets",
+            "schema": { "$ref": "#/definitions/PetList" },
+            "headers": {
+              "X-Next": {
+                "type": "string",
+                "description": "Cursor for the next page."
+              }
+            }
+          },
+          "400": { "description": "Invalid request" }
+        }
+      },
+      "post": {
+        "tags": ["pets"],
+        "summary": "Create a pet",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": { "$ref": "#/definitions/NewPet" },
+            "description": "Pet to create."
+          }
+        ],
+        "responses": {
+          "201": { "description": "Created", "schema": { "$ref": "#/definitions/Pet" } },
+          "422": { "description": "Validation error" }
+        },
+        "security": [{ "api_key": [] }]
+      }
+    },
+    "/pets/{id}": {
+      "get": {
+        "tags": ["pets"],
+        "summary": "Get pet by ID",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "string", "description": "Pet ID" },
+          {
+            "name": "include",
+            "in": "query",
+            "type": "string",
+            "enum": ["owner", "vaccinations"],
+            "description": "Optional related resources."
+          }
+        ],
+        "responses": {
+          "200": { "description": "OK", "schema": { "$ref": "#/definitions/Pet" } },
+          "404": { "description": "Not found" }
+        }
+      },
+      "delete": {
+        "tags": ["pets"],
+        "summary": "Delete pet",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "type": "string" },
+          { "name": "hard", "in": "query", "type": "boolean", "default": false }
+        ],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/upload": {
+      "post": {
+        "tags": ["pets"],
+        "summary": "Upload pet image",
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          { "name": "id", "in": "formData", "type": "string", "required": true, "description": "Pet ID" },
+          { "name": "file", "in": "formData", "type": "file", "required": true, "description": "Image file" }
+        ],
+        "responses": { "204": { "description": "Uploaded" } }
+      }
+    },
+    "/owners/{ownerId}": {
+      "get": {
+        "tags": ["owners"],
+        "summary": "Get owner by ID",
+        "parameters": [
+          { "name": "ownerId", "in": "path", "required": true, "type": "string" }
+        ],
+        "responses": {
+          "200": { "description": "OK", "schema": { "$ref": "#/definitions/Owner" } },
+          "404": { "description": "Not found" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "description": "A pet.",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "tag": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "pending", "sold"] },
+        "owner": { "$ref": "#/definitions/Owner" }
+      }
+    },
+    "NewPet": {
+      "allOf": [
+        { "$ref": "#/definitions/Pet" },
+        {
+          "type": "object",
+          "required": ["name"],
+          "properties": {
+            "id": { "type": "string", "readOnly": true }
+          }
+        }
+      ],
+      "description": "Payload to create a pet."
+    },
+    "Owner": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "preferences": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "PetList": {
+      "type": "object",
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/definitions/Pet" } },
+        "next": { "type": "string" }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": { "type": "apiKey", "name": "X-API-Key", "in": "header" },
+    "oauth2": {
+      "type": "oauth2",
+      "authorizationUrl": "https://auth.example.com/authorize",
+      "flow": "implicit",
+      "scopes": {
+        "pets:write": "modify pets",
+        "pets:read": "read pets"
+      }
+    }
+  },
+  "security": [{ "oauth2": ["pets:read"] }],
+  "externalDocs": {
+    "description": "More docs",
+    "url": "https://example.com/docs"
+  }
+}
