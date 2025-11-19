@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/dmoose/openapi-go-md/pkg/markdown"
+	"github.com/dmoose/openApiGo/pkg/markdown"
 )
 
 func main() {

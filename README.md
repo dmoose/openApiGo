@@ -1,6 +1,6 @@
-# openapi-go-md
+# openApiGo
 
-`openapi-go-md` is a small Go module that converts OpenAPI / Swagger specs (v2 or v3, JSON or YAML) into Markdown. It provides:
+`openApiGo` is a small Go module that converts OpenAPI / Swagger specs (v2 or v3, JSON or YAML) into Markdown. It provides:
 
 - A CLI (`cmd/openapi-go-md`) for converting specs from files, stdin, or URLs.
 - A Go library (`pkg/markdown`) that you can call directly from your own code.
@@ -18,7 +18,7 @@ Some features are intentionally minimal for now (for example, no per-operation s
 ### Using `go install`
 
 ```bash
-go install github.com/dmoose/openapi-go-md/cmd/openapi-go-md@latest
+go install github.com/dmoose/ApiGo-go-md/cmd/openApiGo@latest
 ```
 
 This installs the `openapi-go-md` binary into your `GOBIN` (usually `$(go env GOPATH)/bin`).
@@ -99,7 +99,7 @@ import (
     "fmt"
     "os"
 
-    "github.com/dmoose/openapi-go-md/pkg/markdown"
+    "github.com/dmoose/openApiGo/pkg/markdown"
 )
 
 func main() {
@@ -138,7 +138,7 @@ This module follows semantic versioning. Until `v1.0.0` the API may change in mi
 
 For most users it is sufficient to depend on the latest tagged version, for example:
 
-- `go get github.com/dmoose/openapi-go-md@latest`
+- `go get github.com/dmoose/openApiGo@latest`
 
 ## Development
 

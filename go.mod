@@ -1,4 +1,4 @@
-module github.com/dmoose/openapi-go-md
+module github.com/dmoose/openApiGo
 
 go 1.25.1
 
