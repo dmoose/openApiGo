@@ -173,7 +173,7 @@ func swagger2ToMarkdown(data []byte) (md string, err error) {
 		}
 	}
 
-	// Schemas (Definitions)
+// Schemas (Definitions)
 	if len(s.Definitions) > 0 {
 		fmt.Fprintf(&b, "\n## Schemas\n")
 		names := make([]string, 0, len(s.Definitions))
@@ -216,6 +216,12 @@ func swagger2ToMarkdown(data []byte) (md string, err error) {
 					}
 					fmt.Fprintln(&b, line)
 				}
+			}
+			// Schema example (standard or vendor)
+			if sch.Example != nil {
+				writeExampleFence(&b, "Example", "application/json", sch.Example)
+			} else if v, ok := sch.VendorExtensible.Extensions["x-example"]; ok {
+				writeExampleFence(&b, "Example", "application/json", v)
 			}
 		}
 	}
@@ -318,6 +324,39 @@ func writeSwagger2Operation(b *bytes.Buffer, method, path string, op *spec.Opera
 		}
 	}
 
+	// Request example (Swagger 2.0: body parameter schema.example)
+	var bodySchema *spec.Schema
+	for _, prm := range op.Parameters {
+		if prm.In == "body" && prm.Schema != nil {
+			bodySchema = prm.Schema
+			break
+		}
+	}
+	if bodySchema != nil {
+		// Prefer schema-level Example if present, else look at items when array.
+		var ex any
+		if bodySchema.Example != nil {
+			ex = bodySchema.Example
+		} else if bodySchema.Items != nil && bodySchema.Items.Schema != nil && bodySchema.Items.Schema.Example != nil {
+			ex = bodySchema.Items.Schema.Example
+		}
+		// Vendor extensions: x-example or x-examples
+		if ex == nil {
+			if v, ok := bodySchema.VendorExtensible.Extensions["x-example"]; ok {
+				ex = v
+			}
+		}
+		if ex != nil {
+			if len(consumes) > 0 {
+				for _, mt := range consumes {
+					writeExampleFence(b, "Request example ("+mt+")", mt, ex)
+				}
+			} else {
+				writeExampleFence(b, "Request example", "", ex)
+			}
+		}
+	}
+
 	// Responses
 	if op.Responses != nil && (len(op.Responses.StatusCodeResponses) > 0 || op.Responses.Default != nil) {
 		fmt.Fprintf(b, "\n**Responses**\n")
@@ -339,6 +378,18 @@ func writeSwagger2Operation(b *bytes.Buffer, method, path string, op *spec.Opera
 				}
 			}
 			fmt.Fprintln(b, line)
+
+			// Render response examples by media type if present.
+			if len(r.Examples) > 0 {
+				var mts []string
+				for mt := range r.Examples {
+					mts = append(mts, mt)
+				}
+				sort.Strings(mts)
+				for _, mt := range mts {
+					writeExampleFence(b, fmt.Sprintf("Response example (%d, %s)", code, mt), mt, r.Examples[mt])
+				}
+			}
 		}
 		if op.Responses.Default != nil {
 			desc := strings.TrimSpace(op.Responses.Default.Description)

@@ -1,0 +1,58 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Examples API (v3)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/things": {
+      "post": {
+        "summary": "Create a thing",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ThingInput"
+              },
+              "example": { "name": "widget" },
+              "examples": {
+                "alt": { "value": { "name": "gadget" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Thing" },
+                "example": { "id": 1, "name": "widget" },
+                "examples": {
+                  "alt": { "value": { "id": 2, "name": "gadget" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ThingInput": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } }
+      },
+      "Thing": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" }
+        },
+        "example": { "id": 123, "name": "gizmo" }
+      }
+    }
+  }
+}

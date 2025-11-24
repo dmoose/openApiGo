@@ -140,8 +140,6 @@ func openAPI3ToMarkdown(data []byte, opts Options) (md string, err error) {
 		}
 		sort.Strings(pathKeys)
 
-		methodOrder := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "TRACE"}
-
 		type opRef struct {
 			Method   string
 			Path     string
@@ -153,18 +151,23 @@ func openAPI3ToMarkdown(data []byte, opts Options) (md string, err error) {
 
 		for _, p := range pathKeys {
 			pi := pathMap[p]
-			opsMap := pi.Operations()
-			for _, m := range methodOrder {
-				op := opsMap[strings.ToLower(m)]
-				if op == nil {
+			ops := []struct {
+				method string
+				op     *openapi3.Operation
+			}{
+				{"GET", pi.Get}, {"POST", pi.Post}, {"PUT", pi.Put}, {"DELETE", pi.Delete},
+				{"PATCH", pi.Patch}, {"OPTIONS", pi.Options}, {"HEAD", pi.Head}, {"TRACE", pi.Trace},
+			}
+			for _, it := range ops {
+				if it.op == nil {
 					continue
 				}
-				ref := opRef{Method: m, Path: p, PathItem: pi, Op: op}
-				if len(op.Tags) == 0 {
+				ref := opRef{Method: it.method, Path: p, PathItem: pi, Op: it.op}
+				if len(it.op.Tags) == 0 {
 					untagged = append(untagged, ref)
 					continue
 				}
-				for _, tag := range op.Tags {
+				for _, tag := range it.op.Tags {
 					tagged[tag] = append(tagged[tag], ref)
 				}
 			}
@@ -248,6 +251,10 @@ func openAPI3ToMarkdown(data []byte, opts Options) (md string, err error) {
 						fmt.Fprintln(&b, line)
 					}
 				}
+				// Schema example
+				if ref.Value.Example != nil {
+					writeExampleFence(&b, "Example", "application/json", ref.Value.Example)
+				}
 			}
 		}
 	}
@@ -264,13 +271,17 @@ func openAPI3ToMarkdown(data []byte, opts Options) (md string, err error) {
 		}
 		sort.Strings(pathKeys)
 
-		methodOrder := []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD", "TRACE"}
-
 		for _, p := range pathKeys {
 			pi := pathMap[p]
-			opsMap := pi.Operations()
-			for _, m := range methodOrder {
-				op := opsMap[strings.ToLower(m)]
+			ops := []struct {
+				method string
+				op     *openapi3.Operation
+			}{
+				{"GET", pi.Get}, {"POST", pi.Post}, {"PUT", pi.Put}, {"DELETE", pi.Delete},
+				{"PATCH", pi.Patch}, {"OPTIONS", pi.Options}, {"HEAD", pi.Head}, {"TRACE", pi.Trace},
+			}
+			for _, it := range ops {
+				op := it.op
 				if op == nil || op.Responses == nil {
 					continue
 				}
@@ -291,7 +302,7 @@ func openAPI3ToMarkdown(data []byte, opts Options) (md string, err error) {
 						}
 					}
 					if hasExample {
-						fmt.Fprintf(&b, "- %s %s %s — has inline examples\n", m, p, code)
+						fmt.Fprintf(&b, "- %s %s %s — has inline examples\n", it.method, p, code)
 					}
 				}
 			}
@@ -347,12 +358,36 @@ func writeOpenAPI3Operation(b *bytes.Buffer, method, path string, pi *openapi3.P
 	// Request Body
 	if op.RequestBody != nil && op.RequestBody.Value != nil && len(op.RequestBody.Value.Content) > 0 {
 		fmt.Fprintf(b, "\n**Request Body**\n")
-		for mt, media := range op.RequestBody.Value.Content {
+		// Stable order of media types
+		var mts []string
+		for mt := range op.RequestBody.Value.Content {
+			mts = append(mts, mt)
+		}
+		sort.Strings(mts)
+		for _, mt := range mts {
+			media := op.RequestBody.Value.Content[mt]
 			typ := "-"
 			if media.Schema != nil && media.Schema.Value != nil {
 				typ = typeOfSchemaRef(media.Schema)
 			}
 			fmt.Fprintf(b, "- %s — schema: %s\n", mt, typ)
+			// Examples: inline example or named examples
+			if media.Example != nil {
+				writeExampleFence(b, "Request example ("+mt+")", mt, media.Example)
+			}
+			if len(media.Examples) > 0 {
+				var exNames []string
+				for name := range media.Examples {
+					exNames = append(exNames, name)
+				}
+				sort.Strings(exNames)
+				for _, name := range exNames {
+					exRef := media.Examples[name]
+					if exRef != nil && exRef.Value != nil && exRef.Value.Value != nil {
+						writeExampleFence(b, fmt.Sprintf("Request example (%s, %s)", name, mt), mt, exRef.Value.Value)
+					}
+				}
+			}
 		}
 	}
 
@@ -380,12 +415,36 @@ func writeOpenAPI3Operation(b *bytes.Buffer, method, path string, pi *openapi3.P
 				}
 				fmt.Fprintf(b, "- %s — %s\n", code, desc)
 				if len(r.Value.Content) > 0 {
-					for mt, media := range r.Value.Content {
+					// Stable order of media types
+					var mts []string
+					for mt := range r.Value.Content {
+						mts = append(mts, mt)
+					}
+					sort.Strings(mts)
+					for _, mt := range mts {
+						media := r.Value.Content[mt]
 						typ := "-"
 						if media.Schema != nil && media.Schema.Value != nil {
 							typ = typeOfSchemaRef(media.Schema)
 						}
 						fmt.Fprintf(b, "  - %s — schema: %s\n", mt, typ)
+						// Examples per media type
+						if media.Example != nil {
+							writeExampleFence(b, fmt.Sprintf("Response example (%s, %s)", code, mt), mt, media.Example)
+						}
+						if len(media.Examples) > 0 {
+							var exNames []string
+							for name := range media.Examples {
+								exNames = append(exNames, name)
+							}
+							sort.Strings(exNames)
+							for _, name := range exNames {
+								exRef := media.Examples[name]
+								if exRef != nil && exRef.Value != nil && exRef.Value.Value != nil {
+									writeExampleFence(b, fmt.Sprintf("Response example (%s, %s, %s)", name, code, mt), mt, exRef.Value.Value)
+								}
+							}
+						}
 					}
 				}
 			}

@@ -55,6 +55,53 @@ func TestToMarkdown_MinimalSwagger2(t *testing.T) {
 	}
 }
 
+func TestSwagger2_Examples_Rendering(t *testing.T) {
+	data, err := os.ReadFile("testdata/v2.examples.json")
+	if err != nil {
+		t.Fatalf("failed to read v2.examples.json: %v", err)
+	}
+	md, err := ToMarkdown(data, Options{Format: FormatJSON})
+	if err != nil {
+		t.Fatalf("ToMarkdown(v2.examples.json) returned error: %v", err)
+	}
+	if !strings.Contains(md, "Request example (application/json)") {
+		t.Fatalf("expected markdown to include a labeled Request example for application/json")
+	}
+	if !strings.Contains(md, "Response example (200, application/json)") {
+		t.Fatalf("expected markdown to include a labeled Response example for 200 application/json")
+	}
+	if !strings.Contains(md, "## Schemas") || !strings.Contains(md, "Example") {
+		t.Fatalf("expected markdown to include schema example section")
+	}
+}
+
+func TestOpenAPI3_Examples_Rendering(t *testing.T) {
+	data, err := os.ReadFile("testdata/v3.examples.json")
+	if err != nil {
+		t.Fatalf("failed to read v3.examples.json: %v", err)
+	}
+	md, err := ToMarkdown(data, Options{Format: FormatJSON})
+	if err != nil {
+		t.Fatalf("ToMarkdown(v3.examples.json) returned error: %v", err)
+	}
+	t.Logf("\n--- v3.examples.md ---\n%s\n--- end ---\n", md)
+	if !strings.Contains(md, "Request example (application/json)") {
+		t.Fatalf("expected markdown to include a labeled Request example for application/json")
+	}
+	if !strings.Contains(md, "Request example (alt, application/json)") {
+		t.Fatalf("expected markdown to include a named Request example 'alt'")
+	}
+	if !strings.Contains(md, "Response example (200, application/json)") {
+		t.Fatalf("expected markdown to include a labeled Response example for 200 application/json")
+	}
+	if !strings.Contains(md, "Response example (alt, 200, application/json)") {
+		t.Fatalf("expected markdown to include a named Response example 'alt'")
+	}
+	if !strings.Contains(md, "## Schemas") || !strings.Contains(md, "Example") {
+		t.Fatalf("expected markdown to include schema example section")
+	}
+}
+
 func TestToMarkdown_Swagger2_NoInfo(t *testing.T) {
 	md, err := ToMarkdown([]byte(swagger2NoInfoJSON), Options{Format: FormatJSON})
 	if err != nil {

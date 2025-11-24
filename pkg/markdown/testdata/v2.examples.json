@@ -1,0 +1,48 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Examples API (v2)",
+    "version": "1.0.0"
+  },
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "paths": {
+    "/things": {
+      "post": {
+        "summary": "Create a thing",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" }
+              },
+              "example": { "name": "widget" }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "examples": {
+              "application/json": { "id": 1, "name": "widget" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Thing": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer", "format": "int64" },
+        "name": { "type": "string" }
+      },
+      "example": { "id": 123, "name": "gadget" }
+    }
+  }
+}

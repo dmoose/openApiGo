@@ -1,6 +1,8 @@
 package markdown
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -135,4 +137,62 @@ func typeOfSchemaRef(ref *openapi3.SchemaRef) string {
 		return strings.Join(*ref.Value.Type, ",")
 	}
 	return "object"
+}
+
+// -------- Example rendering helpers --------
+
+// fenceLanguage picks a code block language hint based on media type and whether
+// we detected JSON content.
+func fenceLanguage(mediaType string, isJSON bool) string {
+	mt := strings.ToLower(strings.TrimSpace(mediaType))
+	if isJSON || strings.Contains(mt, "json") {
+		return "json"
+	}
+	if strings.Contains(mt, "xml") {
+		return "xml"
+	}
+	if strings.Contains(mt, "html") {
+		return "html"
+	}
+	// For text/* don't force a language; empty hint renders as plain fence.
+	return ""
+}
+
+// exampleToPrettyString turns an arbitrary example value into a string and
+// indicates whether it was rendered as JSON.
+func exampleToPrettyString(v any) (s string, isJSON bool) {
+	// If it's already a structured value (map/array), pretty-print as JSON.
+	switch vv := v.(type) {
+	case map[string]any, []any:
+		buf, err := json.MarshalIndent(vv, "", "  ")
+		if err == nil {
+			return string(buf), true
+		}
+	case string:
+		// Try to parse as JSON string.
+		var tmp any
+		if json.Unmarshal([]byte(vv), &tmp) == nil {
+			buf, err := json.MarshalIndent(tmp, "", "  ")
+			if err == nil {
+				return string(buf), true
+			}
+		}
+		return vv, false
+	}
+	// Fallback string formatting.
+	return fmt.Sprintf("%v", v), false
+}
+
+// writeExampleFence emits a labeled fenced code block for an example.
+func writeExampleFence(b *bytes.Buffer, label, mediaType string, v any) {
+	content, isJSON := exampleToPrettyString(v)
+	lang := fenceLanguage(mediaType, isJSON)
+	if label != "" {
+		fmt.Fprintf(b, "%s\n", label)
+	}
+	if lang != "" {
+		fmt.Fprintf(b, "```%s\n%s\n```\n", lang, content)
+	} else {
+		fmt.Fprintf(b, "```\n%s\n```\n", content)
+	}
 }

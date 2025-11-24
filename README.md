@@ -87,6 +87,7 @@ The generated Markdown includes:
 - Overview, authentication, servers, tags.
 - Endpoints grouped by tag, with parameters, responses, operation IDs, and media types.
 - Schemas with property types, required flags, default values, and enums where available.
+- Examples: request/response examples and schema examples when present in the spec (Swagger 2.0 and OpenAPI 3.x).
 
 See `pkg/markdown/testdata` for example Swagger 2.0 and OpenAPI 3.x documents used in tests.
 
@@ -139,6 +140,23 @@ This module follows semantic versioning. Until `v1.0.0` the API may change in mi
 For most users it is sufficient to depend on the latest tagged version, for example:
 
 - `go get github.com/dmoose/openApiGo@latest`
+
+## Examples rendering
+
+openApiGo renders examples that are explicitly provided in your spec (it does not generate examples).
+
+- Swagger 2.0
+  - Responses: `paths[...][...].responses[status].examples[mediaType]`
+  - Request body: `in: body` parameter `schema.example` (and common vendor `x-example`)
+  - Schemas: `definitions[Name].example`
+- OpenAPI 3.x
+  - Responses: `responses[status].content[mediaType].example` or `.examples[name].value`
+  - Request body: `requestBody.content[mediaType].example` or `.examples[name].value`
+  - Schemas: `components.schemas[Name].example`
+
+Formatting details:
+- Pretty-printed fenced code blocks; language hint inferred from media type (e.g., json, xml).
+- Request examples appear after Parameters and before Responses; schema examples appear under each schema.
 
 ## Development
 
